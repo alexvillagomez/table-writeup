@@ -1,219 +1,219 @@
 # Table
 
-**One restaurant recommendation algorithm, with or without a search query.**
+**Personalized restaurant recommendations from taste and intent.**
 
-With an empty search box, Table recommends nearby places using community quality, learned content taste, matrix factorization and distance. When someone types *“cozy dessert spot for a date”* or *“quiet coffee shop to study,”* semantic search adds the meaning of that request to the same ranking—not a separate results system.
+Table combines content-based taste modeling, implicit matrix factorization and semantic search in one ranking function. Review scores and interactions model the user; review text and tags model each restaurant. A natural-language request such as `quiet coffee shop to study` adds the user's current intent to that personalized ranking alongside quality and distance.
 
-The result blends who the person is with what they want right now. Reviews teach the recommender both: ratings reveal personal taste, while notes and tags describe what a restaurant actually feels like.
+This repo explains the system; the app source is private.
 
-This repo is a write-up, not the source. The app code stays private for now, but I wanted a place to explain the product, how the search works and how I tested it.
+**Status:** iOS app (Expo / React Native) in active development, backed by Supabase and more than 800 OpenStreetMap venues across UCLA/Westwood and Carmel Mountain Ranch in San Diego.
 
-**Status:** iOS app (Expo / React Native) in active development, backed by a live Supabase database with more than 800 OpenStreetMap venues across the UCLA/Westwood area and Carmel Mountain Ranch in San Diego.
+## Recommendation inputs
 
-## Search for the moment
+Each restaurant is scored from:
 
-Table accepts the situation someone would normally say out loud:
+- **Personal taste:** what this person tends to enjoy, learned from their reviews.
+- **Shared behavior:** patterns between people and places, learned with matrix factorization.
+- **Current intent:** semantic, lexical and structured relevance to the user's request.
+- **Place quality:** community ratings adjusted for different rating habits and small sample sizes.
+- **Context:** distance, price, group size and explicit app filters.
 
-- `somewhere quiet to study with coffee`
-- `cheap late-night Chinese near me`
-- `cozy dessert spot for a date`
-- `a lively bar for 8 people`
+The request can describe a vibe, craving, cuisine, occasion or constraint. It changes the recommendation score without replacing the personal taste and collaborative signals.
 
-The algorithm keeps price, moment, cuisine, distance, group size and atmosphere together instead of reducing the request to one keyword.
+## Example query
 
-## From a vibe to a ranked list
+Suppose someone searches:
 
-When someone searches, Table does five things:
+```text
+cheap late-night Chinese near me
+```
 
-1. **Understands the request.** It identifies known ideas such as quiet, date night, groups, cheap, quick, spicy or late night while keeping the full sentence for semantic matching.
-2. **Finds plausible places.** It gathers nearby restaurants, direct text matches, semantically similar places and matches from structured cuisine or venue data.
-3. **Reads the place through its reviews.** Review notes, descriptions and tags form a searchable profile of what each place feels like and what it is good for.
-4. **Adjusts for the person and the moment.** The ranker blends query relevance with the person's taste, community opinion, distance, price and group context.
-5. **Returns one ordered list.** The strongest complete matches lead, but useful alternatives can remain when the data is incomplete or no place satisfies every part of the request.
+Table reads several things in the same sentence:
 
-That last point is intentional. Natural language is used as a preference, not a hidden set of hard filters. A request for `Chinese late night` should favor a place with evidence for both, but it should not return nothing just because opening-hours coverage is incomplete. Only the visible distance, price and **New to me** controls are hard filters.
+- `cheap` describes price and value;
+- `late-night` describes the occasion and expected experience;
+- `Chinese` names a cuisine;
+- `near me` increases the cost of distance;
+- the full sentence supplies a semantic embedding that can match related review language and paraphrases.
 
-## Why reviews matter
+It then gathers nearby, lexical, semantic and cuisine-matched candidates. Each candidate is scored for query fit, personal taste, community quality and distance. A strong match for every part should lead, while useful alternatives remain available when no restaurant has evidence for the entire request.
 
-A directory can say that a place is a cafe. Reviews can say that it is calm on weekday afternoons, has outlets near the back wall, works for solo studying or becomes loud after 9.
+Natural-language intent is deliberately soft. It influences order rather than silently acting as a filter. Only the visible distance, price and **New to me** controls are hard filters.
 
-Table reviews capture:
+## Reviews power the model
 
-- a rating made relative to places the reviewer already knows;
+A place listing may say that a restaurant is a cafe. Reviews can say that it is quiet in the afternoon, good for solo work, crowded after 9 or worth the walk for large portions.
+
+Each Table review can include:
+
+- a rating made relative to restaurants the reviewer already knows;
 - a note about the visit and a description of the place;
-- **Vibe** tags such as cozy, lively, romantic, quiet or outdoor;
-- **Recommended for** tags such as date night, groups, late night, studying or a quick bite;
+- vibe tags such as cozy, lively, romantic, quiet or outdoor;
+- occasion tags such as date night, groups, late night, studying or a quick bite;
 - experience tags such as cheap, worth it, big portions, slow service or good drinks;
 - optional photos and visit context.
 
-The written review and tags do two jobs. They strengthen the restaurant's semantic profile, and they teach the recommender what that reviewer tends to like. Reviews are not a separate feed beside search; they are the evidence the search is built on.
+The same review improves multiple parts of the system. Its score teaches the personal taste model. The interaction contributes to matrix factorization. Its words and tags strengthen the restaurant's searchable profile. Reviews are therefore both product content and model data.
 
 ## What the app does today
 
-- **One query-aware recommender.** With text, semantic relevance reshapes the personal ranking; without it, matrix factorization, learned taste, quality and distance still recommend places.
-- **Reviews without stars.** A slider shows the person's past restaurants as reference points, so every rating is relative to their own history. The numeric score is never shown.
-- **Review-derived summaries.** Result rows and place pages show the tags and notes people associate with a restaurant.
-- **Useful controls.** Filter by distance, price or places that are new to the user.
-- **Photo-based visit discovery.** Scan photo locations to find restaurants the person likely visited but has not reviewed.
-- **Saved places and likes.** Act on a result without leaving the list.
-- **Accounts and review photos.** Upgrade anonymous use without losing activity, then attach photos from the scan, library or camera.
+- Ranks nearby restaurants for each person using learned taste, matrix factorization, quality and distance.
+- Accepts natural-language requests that reshape those recommendations through semantic search.
+- Lets people rate restaurants on a benchmark slider against their own review history instead of using visible stars.
+- Shows review-derived tags and recent notes on results and place pages.
+- Filters by distance, price or places the person has not reviewed.
+- Finds likely past visits from photo locations, then lets the person review or dismiss them.
+- Supports likes, saved places, accounts and photos from the scan, library or camera.
 
-## Recent search improvements
+## How the recommendation system works
 
-The first version was mostly a concept lexicon, full-text search and embeddings. The current version adds more structure where semantic similarity alone is too fuzzy:
-
-- **Typed cuisine and venue intent.** `Chinese`, `Sichuan`, `sushi` and `ramen` remain distinct instead of collapsing into a broad “Asian” match. An alcohol bar is also separated from a sushi bar or juice bar.
-- **Soft constraints and negation.** Named cuisines and venue types add or subtract calibrated relevance. `Chinese not Japanese` can express both sides without deleting every alternative from the candidate set.
-- **Party-size parsing.** `For 8 people` means eight; `with 8 friends` means nine including the user. Confirmed capacity helps, confirmed too-small capacity hurts and missing capacity stays neutral.
-- **Stable equivalent phrasing.** Fully understood variations are canonicalized before lexical and embedding search, so `Chinese late night` and `late night Chinese` do not drift just because of word order.
-- **Richer source facts.** The importer now preserves place type, hours, reservations, outdoor seating, accessibility, capacity, alcohol information and source timestamps when OpenStreetMap provides them.
-- **Honest unknowns.** Raw hours are stored, but `open now` is not used as relevance until complete schedule, timezone and holiday parsing can support the claim. “Late night” currently comes from review and description evidence.
-
-The live corpus is still uneven. Cuisine and venue type have useful coverage; exact capacity is rare. Unknown data is therefore neutral rather than silently treated as a match or a failure.
-
-## How it works under the hood
-
-Everything after the phone sends the query is scored on the server. Query vectors and model factors never leave Supabase.
+Everything is scored on the server. The phone sends the request, location, user and filters; query vectors and model factors stay in Supabase.
 
 ```mermaid
 flowchart LR
-  U["A person describes a vibe"] --> A["App<br/>query + location + filters"]
-  A --> E["Edge Function<br/>normalize + gte-small embedding"]
-  E --> S["Postgres search_places()<br/>one ranking statement"]
-  A -->|empty query| S
-  S --> I["Interpret<br/>concepts + typed intent + party size"]
-  S --> C["Retrieve<br/>nearby ∪ text ∪ semantic ∪ typed"]
-  I --> R["Rerank<br/>meaning + taste + quality + distance"]
-  C --> R
-  R --> O["Ranked nearby places"]
+  V["Reviews<br/>scores + text + tags"] --> P["Place profiles"]
+  V --> U["User taste + matrix factorization"]
+  Q["Natural-language request"] --> S["Semantic + structured intent"]
+  L["Location + filters"] --> R["One ranking function"]
+  P --> R
+  U --> R
+  S --> R
+  R --> O["Personalized ranked places"]
 ```
 
-### 1. Normalize only what is safe
+### Place profiles
 
-The Edge Function canonicalizes requests only when the meaning is fully understood. Equivalent numeric and word forms share an embedding, as do commutative phrases such as `Chinese late night` and `late night Chinese`. Free-form, alternative and negated requests are left alone rather than being silently rewritten.
+Each restaurant has four main representations:
 
-Unsupported availability language is removed from relevance. Until Table can correctly interpret weekly schedules, overnight hours, timezones and holiday exceptions, `open now` cannot pretend to be verified.
+1. A searchable document made from its name, cuisine, description, review notes and tags.
+2. A 384-dimensional `gte-small` embedding built from its descriptive text and reviews.
+3. A 19-dimensional concept profile covering ideas such as quiet, study, date night, cheap, groups, spicy, healthy, late night and drinks.
+4. Collaborative and quality terms learned from review behavior and scores.
 
-### 2. Separate intent from the remaining text
+The concept profile provides interpretable evidence. The embedding handles phrasing that the fixed concept vocabulary does not anticipate. Full-text and structured fields preserve precision for restaurant names, dishes, cuisines and venue types.
 
-A 19-concept lexicon recognizes experiences such as late night, date, cheap, study, quiet, lively, groups, quick, solo, coffee, dessert, healthy, hearty, outdoor and drinks. Negation flips a matched concept instead of losing the word.
+### User profiles
 
-Structured parsers handle explicit cuisines, alcohol-venue language and party size. Words not claimed by a concept or parser become the food-specific part of the query: in `cheap tacos`, `cheap` shapes the concept score while `tacos` still has to match what the restaurant serves.
+Personalization combines two views of taste:
 
-If no known concept explains the request, the query embedding softly activates the nearest concepts. This lets paraphrases work without forcing every sentence into a fixed vocabulary.
+- **Content taste:** ridge regression learns which place concepts predict this person's ratings. This captures preferences that can be explained, such as liking quiet cafes or disliking expensive restaurants.
+- **Collaborative taste:** implicit matrix factorization learns from which places people reviewed, with confidence weighted by their scores. This can connect users and restaurants even when the relationship is not captured by a named concept.
 
-### 3. Retrieve a union of candidates
+The two methods complement each other. Content features explain *why* a place may fit; matrix factorization captures patterns the hand-built features miss. A new user falls back to community quality and distance until their reviews provide enough personal evidence.
 
-The candidate pool combines:
+### Query understanding
 
-- the nearest places;
-- full-text matches over restaurant and review documents;
-- the places most similar to the query embedding;
+The request is embedded with `gte-small`, but embeddings are not trusted to do everything.
+
+A concept lexicon recognizes common restaurant intents and negation. Structured parsers identify named cuisines, alcohol venues and party sizes. Words not claimed by those parsers remain available for food-specific matching, so `cheap tacos` still has to match tacos rather than only cheap places.
+
+When the request falls outside the known vocabulary, semantic similarity still contributes directly and can softly activate related concepts. This lets the model accept free-form requests without pretending every sentence can be reduced to a fixed set of labels.
+
+### Candidate retrieval
+
+The candidate set is a union of:
+
+- nearby restaurants;
+- full-text matches;
+- the most semantically similar place profiles;
 - structured cuisine and venue-type matches.
 
-It is a union, not a sequence of gates. A semantic match cannot remove a strong nearby option, and a sparse structured field cannot empty the result list.
+Using a union matters. Semantic retrieval cannot remove a strong nearby recommendation, and missing structured data cannot empty the result list.
 
-### 4. Build restaurant and user profiles
+### Ranking
 
-Each restaurant gets:
-
-- a searchable document made from its name, cuisine, description, review notes and review tags;
-- a 384-dimensional `gte-small` embedding;
-- a 19-dimensional concept profile built from chips, review language, cuisine and price;
-- a quality prior that corrects for generous and harsh reviewers;
-- a small collaborative-filtering factor learned from which places people reviewed.
-
-Each user gets a taste vector learned by ridge regression over the profiles of places they rated, plus a collaborative-filtering factor and an individual distance sensitivity. A new user automatically falls back to community quality and distance instead of needing a separate cold-start path.
-
-### 5. Rank everything together
-
-The core score is:
+Every candidate is scored by one Postgres function:
 
 ```text
 score = quality
-      + personal concept taste
+      + content taste
       + collaborative taste
       - distance cost
-      + semantic and lexical relevance
-      + typed cuisine, venue and party fit
+      + query relevance
+      + structured intent fit
 ```
 
-In the implementation this is one Postgres statement:
+The implementation is approximately:
 
 ```text
 prior + θᵤ·φₚ + 0.05·z(xᵤ·yₚ) − distance + β·relevance + typed_fit
 ```
 
-- `prior` is a Bayesian average centered on each reviewer's own mean, so generous and harsh raters count comparably.
-- `θᵤ·φₚ` is content taste: what this user tends to like about a place.
-- `xᵤ·yₚ` is implicit matrix factorization over which places people reviewed.
-- `distance` is learned from how ratings change with travel distance, then reshaped by phrases such as `near me` and by the distance slider.
-- `relevance` blends concept fit, full-text rank, food-specific matching and cosine similarity to the place embedding.
+- `prior` is a Bayesian quality estimate centered on each reviewer's average, so harsh and generous raters count comparably.
+- `θᵤ·φₚ` is the match between the user's learned content taste and the restaurant's concept profile.
+- `xᵤ·yₚ` is the matrix-factorization signal.
+- `distance` is learned from rating behavior, then adjusted by the request and distance slider.
+- `relevance` blends concepts, full-text rank, food matching and embedding similarity.
 - `typed_fit` adds bounded evidence for cuisine, venue type and known party capacity.
 
-The weights stay in rating-score units so a query feature can be compared with quality, taste and distance instead of becoming an arbitrary second ranking system.
+The query changes the relevance and context terms without discarding the recommendation terms. That is the central design: semantic search and collaborative recommendation contribute to the same score.
 
-## How I tested it
+## Recent improvements
 
-I built the evaluation harness before the production ranker. Synthetic users and places contain hidden attributes and tastes that the models never see, which makes it possible to measure whether each added idea actually recovers the truth.
+Semantic similarity is useful but too fuzzy for some explicit requests, so the current ranker adds structure where precision matters:
+
+- `Chinese`, `Sichuan`, `sushi` and `ramen` stay distinct instead of collapsing into “Asian.”
+- An alcohol bar is distinguished from a sushi bar, juice bar or salad bar.
+- Negated intent subtracts relevance, allowing requests such as `Chinese not Japanese`.
+- Party language is parsed: `for 8 people` means eight, while `with 8 friends` means nine including the user.
+- Equivalent understood phrasing is normalized before embedding, so word order and written numbers do not needlessly change results.
+- The importer now preserves source facts such as place type, hours, reservations, outdoor seating, accessibility, capacity and alcohol information.
+
+Unknown evidence remains neutral. For example, exact capacity is available for very few venues, so Table cannot promise that a restaurant seats eight. Raw hours are stored, but `open now` is intentionally excluded from relevance until schedule, timezone and holiday parsing can support the claim.
+
+## Evaluation
+
+I built the evaluation harness before the production ranker. Synthetic users and restaurants contain hidden tastes and attributes that the models never see, making it possible to measure what each model recovers.
 
 | model | adds | personalization NDCG@10 | query NDCG@5 |
 | --- | --- | ---: | ---: |
 | M0 | nearest + rating | 0.678 | 0.441 |
 | M1 | lexicon + full-text | 0.678 | 0.780 |
-| M2 | content taste (ridge) | 0.799 | 0.781 |
-| M3 | + implicit MF | **0.821** | 0.777 |
-| M4 | + `gte-small` embeddings | 0.821 (empty query = M3) | **0.846** |
+| M2 | content taste | 0.799 | 0.781 |
+| M3 | + implicit matrix factorization | **0.821** | 0.777 |
+| M4 | + `gte-small` semantic search | 0.821 | **0.846** |
 
-The embedding model was also tested on 22 paraphrases written after its weights were frozen. It beat the non-embedding model there too (0.791 vs. 0.751) and reduced irrelevant top-five results from 18% to 14%. The held-out gain is smaller than the development gain, which is the number I trust.
+M3 is the recommendation model used when there is no request. M4 adds semantic query relevance without changing the underlying personalized ranking.
 
-The newer explicit-intent suite tests cuisines, bars, party wording, alternatives, exclusions and unsupported `open now` phrasing against the live corpus. The current soft-ranking policy passes 16 of 18 primary preference checks. Four families of equivalent queries have 1.00 top-ten set and prefix agreement, including word-order changes and numeric-versus-written party sizes.
+On 22 paraphrases written after the weights were frozen, M4 beat M3 by 0.791 to 0.751 and reduced irrelevant top-five results from 18% to 14%. The smaller held-out gain is the result I trust.
 
-Those results are reported with coverage. For example, Table can measure cuisine behavior across many labeled venues, but it cannot claim that a place seats eight when capacity exists for only a handful of records.
+A newer production suite covers cuisines, bars, party wording, alternatives, exclusions and unsupported `open now` language. The current soft-ranking policy passes 16 of 18 primary checks. Equivalent word-order and party-size phrasings produce identical top-ten sets and prefixes in the tested families.
 
-## Bugs and failures worth telling
+Coverage is reported alongside performance. Cuisine behavior can be measured across many venues; exact eight-person fit cannot be validated when almost no source records contain capacity.
 
-- **Stopwords ate the meaning.** Postgres's default English configuration dropped `after` from `after hours`, and `close by` collided with `closed`. A custom configuration now stems words while preserving stopwords.
-- **“Cheap tacos” returned boba.** Concept profiles were standardized over hundreds of mostly unreviewed places, causing the reviewed subset to overwhelm the food match. Standardizing over reviewed places and separating the remaining food terms moved mixed-query success from 23/90 to 76/90.
-- **A bar was not always a bar.** Plain text treated sushi bars, salad bars and juice bars like alcohol venues. Venue-type relevance now requires structured or exact factual evidence.
-- **Equivalent sentences drifted.** Embeddings for `bar for eight people` and `bar for 8` were close but not identical, which needlessly changed the order. Conservative canonicalization now gives fully understood equivalents one representation.
-- **Nearest was not nearest in degrees.** A geographic KNN index measures raw latitude and longitude degrees, overstating east-west distance. The nearby query widens the indexed search by the exact latitude correction and then sorts by real meters; it matched a full sort on all 66 verification queries.
-- **The learned embedding transform overfit.** A fifth model trained on simulated likes and saves won on validation and lost on held-out queries. It learned the author's phrasing rather than meaning, so it is not shipped.
+## Failures that changed the design
 
-## The newest review-retrieval finding
+- **Stopwords changed intent.** Postgres dropped `after` from `after hours`, while `close by` collided with `closed`. A custom text configuration now stems words without discarding stopwords.
+- **“Cheap tacos” returned boba.** Reviewed places were over-standardized and overwhelmed the food match. Separating remaining food terms and correcting the reference population moved mixed-query success from 23/90 to 76/90.
+- **A bar was not always a bar.** Plain text matched sushi bars and juice bars as alcohol venues. Venue intent now requires structured or exact factual evidence.
+- **Equivalent sentences drifted.** Similar embeddings still changed the order for `bar for 8` and `bar for eight people`. Conservative normalization now gives fully understood equivalents the same representation.
+- **A learned embedding transform overfit.** It improved validation results and lost on held-out queries, so it is not shipped.
 
-A recent diagnostic asked 26 questions whose answers appeared inside 23 real reviews. It exposed a pipeline problem before a model problem: a new or edited review clears its old vector, but the current batch trainer has to run before search can use the new text.
+## Fresh-review retrieval
 
-Simulating that refresh moved `gte-small` top-five retrieval from 15.4% to 92.3%. Comparing the query with individual review passages reached 96.2%, and a MiniLM-L6 reranker improved ordering further. Those labels were deliberately derived from the same reviews, so this is a retrieval diagnostic, not an unbiased product-quality benchmark.
+A recent 26-query diagnostic found that fresh reviews can wait for the batch trainer before becoming searchable. That is an indexing problem: a retrieval model cannot use text it has not received.
 
-The next search change is event-driven indexing after every review save, while keeping the full batch job for periodic taste and collaborative-factor training. A small review-level reranker is promising but is not shipped yet. Spelling correction is separate work; neither embeddings nor reranking reliably turned `booba` back into `boba`.
+Simulating an immediate refresh moved `gte-small` top-five retrieval from 15.4% to 92.3%. Comparing against individual review passages reached 96.2%, and a MiniLM-L6 reranker improved the ordering further. Because the questions were deliberately written from those reviews, this is a retrieval diagnostic rather than an unbiased product benchmark.
+
+The next step is event-driven indexing after each review save. The full batch trainer will remain responsible for periodic taste and matrix-factorization updates. The review-level reranker is promising but not yet shipped.
 
 ## Photo scan
 
-The visit scanner was built for a phone with a 20,000-photo library:
+The visit scanner was designed for a 20,000-photo library. Located photos are cached on the phone, later scans fetch only changes and repeated coordinates collapse into one point before matching. Photos at the same nearby restaurant on the same day become one visit; reviewed and dismissed visits stay hidden.
 
-1. A device cache holds every located photo; later scans ask iOS only for photos changed since the last scan.
-2. Photos outside supported areas are discarded, identical coordinates collapse into one spot and all spots are matched in one server request.
-3. Nearby photos at the same restaurant on the same day become one visit. Reviewed and dismissed visits stay hidden on later scans.
+The first scan of roughly 12,000 photos takes about 20 seconds on the test phone. Later scans usually process only a handful, while a 12,000-photo synthetic server match takes 0.3–0.9 seconds.
 
-The first scan of about 12,000 located photos takes roughly 20 seconds on the test phone; later scans usually process only a handful. A 12,000-photo synthetic server match takes about 0.3–0.9 seconds.
-
-## Data
-
-- **Places** come from OpenStreetMap through Overpass and are seeded into Supabase. The app never calls Overpass directly.
-- **Structured source facts** are stored separately from curated descriptions so re-importing OpenStreetMap does not overwrite editorial text.
-- **Cold start** uses source facts plus a generated cuisine/dish/format description and price estimate, making a new place searchable before it has reviews.
-- **Unknown stays unknown.** The system does not manufacture hours, capacity, accessibility or review evidence to fill gaps.
-- **Learning signals** are already recorded: ordered result lists, scroll depth, likes, saves, place-page time and reviews. These are for evaluating a future learned ranker; the overfit embedding transform is not in production.
-
-## Stack
+## Data and stack
 
 - Expo SDK 57, React Native, Expo Router and TypeScript
 - Supabase Postgres with `pgvector`, GIN full-text search, a GiST spatial index and row-level security
-- Supabase Edge Functions running `gte-small` for query and document embeddings
-- Node scripts for OpenStreetMap seeding, enrichment, nightly training and the evaluation harness
-- One shared model implementation between the harness and trainer, so the algorithm measured offline is the one written to production tables
+- Supabase Edge Functions running `gte-small`
+- OpenStreetMap place data imported through Overpass; the app never calls Overpass directly
+- Separate structured source facts and curated descriptions, so enrichment does not overwrite source data
+- Node scripts for seeding, enrichment, training and evaluation
+
+New restaurants receive a source-backed description and price estimate so they are searchable before reviews arrive. Unknown hours, capacity, accessibility and review evidence are never invented to fill gaps.
 
 ## Why I built it
 
-Choosing where to eat is rarely just “what cuisine do I want?” It depends on the moment: somewhere loud for a group, quiet enough to study, quick after class, cozy for a date or comforting at the end of a long day. Most food apps flatten that into star ratings and category filters, even though the vibe matters as much as the food. I built Table because semantic search should be able to capture the whole thought in your head—the mood, occasion, constraints and craving—and match it against what reviews say a place actually feels like. The goal is not just to find good food; it is to find the place that fits *right now*.
+Choosing where to eat is rarely just “what cuisine do I want?” It depends on the moment: somewhere loud for a group, quiet enough to study, quick after class, cozy for a date or comforting after a long day. I built Table because a recommendation system should understand both the person and that moment. Matrix factorization can learn patterns in taste, while semantic search can express what those patterns alone cannot: what someone wants *right now*.
