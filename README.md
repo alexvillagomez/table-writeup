@@ -1,10 +1,10 @@
 # Table
 
-**Restaurant search for the mood you are in, not just the cuisine you can name.**
+**One restaurant recommendation algorithm, with or without a search query.**
 
-Sometimes the question is not *“Do I want Italian or Chinese?”* It is *“Where can eight of us go after class?”*, *“I want something cozy and sweet for a date”* or *“Find me a quiet coffee shop where I can stay for a while.”*
+With an empty search box, Table recommends nearby places using community quality, learned content taste, matrix factorization and distance. When someone types *“cozy dessert spot for a date”* or *“quiet coffee shop to study,”* semantic search adds the meaning of that request to the same ranking—not a separate results system.
 
-Table lets someone search that whole thought. It uses semantic search to understand the vibe, occasion, craving and constraints together, then ranks nearby places using what reviews say they actually feel like. The same search is also personalized by the places that person has reviewed and how far they are willing to go.
+The result blends who the person is with what they want right now. Reviews teach the recommender both: ratings reveal personal taste, while notes and tags describe what a restaurant actually feels like.
 
 This repo is a write-up, not the source. The app code stays private for now, but I wanted a place to explain the product, how the search works and how I tested it.
 
@@ -12,17 +12,14 @@ This repo is a write-up, not the source. The app code stays private for now, but
 
 ## Search for the moment
 
-A normal restaurant search usually starts with a category and ends with a list sorted by stars or distance. Table starts with the situation:
+Table accepts the situation someone would normally say out loud:
 
 - `somewhere quiet to study with coffee`
 - `cheap late-night Chinese near me`
 - `cozy dessert spot for a date`
 - `a lively bar for 8 people`
-- `healthy lunch, not a salad bar`
 
-Each sentence mixes different kinds of meaning. `Cheap` is a price preference. `Late night` is a moment. `Chinese` is a cuisine. `Near me` changes how much distance should matter. `For 8 people` describes the group, while `cozy` or `lively` describes the atmosphere.
-
-Table keeps those pieces together instead of reducing the request to one keyword.
+The algorithm keeps price, moment, cuisine, distance, group size and atmosphere together instead of reducing the request to one keyword.
 
 ## From a vibe to a ranked list
 
@@ -53,14 +50,13 @@ The written review and tags do two jobs. They strengthen the restaurant's semant
 
 ## What the app does today
 
-- **Semantic search.** Search naturally instead of selecting a cuisine and stacking filters.
-- **Personal recommendations.** Leave the box empty and the same ranker recommends places from taste, quality and distance.
+- **One query-aware recommender.** With text, semantic relevance reshapes the personal ranking; without it, matrix factorization, learned taste, quality and distance still recommend places.
 - **Reviews without stars.** A slider shows the person's past restaurants as reference points, so every rating is relative to their own history. The numeric score is never shown.
 - **Review-derived summaries.** Result rows and place pages show the tags and notes people associate with a restaurant.
 - **Useful controls.** Filter by distance, price or places that are new to the user.
 - **Photo-based visit discovery.** Scan photo locations to find restaurants the person likely visited but has not reviewed.
 - **Saved places and likes.** Act on a result without leaving the list.
-- **Accounts and review photos.** Anonymous use can be upgraded to an account without losing activity, and photos can be attached from the scan, library or camera.
+- **Accounts and review photos.** Upgrade anonymous use without losing activity, then attach photos from the scan, library or camera.
 
 ## Recent search improvements
 
